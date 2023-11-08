@@ -1,35 +1,23 @@
-import logging, pathlib, contextlib, json, hashlib
+import contextlib
+import hashlib
+import json
+import logging
+import pathlib
 
 from PySide6 import QtGui
-
+from sqlalchemy import BINARY, Column, Float, ForeignKey, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    BINARY,
-    Table,
-    UniqueConstraint,
-    CheckConstraint,
-    Float,
-    Text,
-    Boolean,
-    DateTime,
-    Index,
-)
-from sqlalchemy import ForeignKey, create_engine, or_, not_, and_
-from sqlalchemy.orm import relationship, sessionmaker, session as session_mod
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
-
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import session as session_mod
+from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
 
-def hash_file(f: pathlib.Path) -> bytes:
-    with f.open("rb") as fp:
+def hash_file(fname: pathlib.Path) -> bytes:
+    with fname.open("rb") as fopen:
         hasher = hashlib.sha256()
-        for chunk in iter(lambda: fp.read(2**20), b""):
+        for chunk in iter(lambda: fopen.read(2**20), b""):
             hasher.update(chunk)
         return hasher.digest()
 
@@ -103,8 +91,8 @@ class F2Instance:
 
     @classmethod
     def from_path(cls, path: pathlib.Path):
-        with (path / cls.SPECFILE_NAME).open() as f:
-            args = json.load(f)
+        with (path / cls.SPECFILE_NAME).open() as metaf:
+            args = json.load(metaf)
         assert args.pop("version") == 1
         return cls(base_dir=path, **args)
 
@@ -137,5 +125,5 @@ class F2Instance:
             session.close()
 
     def initialize(self):
-        with (self._base_dir / self.SPECFILE_NAME).open("w") as f:
-            json.dump({"db_addr": self._db_addr, "version": 1}, f)
+        with (self._base_dir / self.SPECFILE_NAME).open("w") as metaf:
+            json.dump({"db_addr": self._db_addr, "version": 1}, metaf)

@@ -1,10 +1,9 @@
-from typing import Sequence
 import enum
+from typing import Sequence
 
+import sqlalchemy.orm
 from PySide6 import QtCore, QtQml
 from sqlalchemy.sql import expression
-import sqlalchemy.orm
-
 
 from . import db, utils
 
@@ -38,6 +37,7 @@ class TrackModel(QtCore.QAbstractTableModel):
             and role == QtCore.Qt.ItemDataRole.DisplayRole
         ):
             return self.HEADERS[section]
+        return None
 
     def flags(self, index):
         return (
@@ -48,7 +48,7 @@ class TrackModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role):
         if not self.checkIndex(index):
-            return
+            return None
 
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             match index.column():
@@ -72,9 +72,11 @@ class TrackModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ItemDataRole.UserRole:
             return self._items[index.row()]
 
+        return None
+
     def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
         if not self.checkIndex(index):
-            return
+            return False
 
         if role == QtCore.Qt.ItemDataRole.EditRole:
             match index.column():

@@ -1,11 +1,9 @@
-from typing import Any, Optional
-import contextlib
 import os
+from typing import Any, Optional
 
-from PySide6 import QtDBus, QtCore, QtQml, QtMultimedia
+from PySide6 import QtCore, QtDBus, QtMultimedia, QtQml
 
 from . import player as player_mod
-
 
 SERVICE_NAME = "org.mpris.MediaPlayer2.Fantasia2"
 MEDIAPLAYER2_PATH = "/org/mpris/MediaPlayer2"
@@ -241,6 +239,7 @@ class MediaPlayer2PlayerInterface(QtDBus.QDBusAbstractAdaptor):
     def Position(self) -> int:
         if self._player is not None:
             return round(self._player.position * 1000000)
+        return 0
 
     @QtCore.Property(float)
     def MinimumRate(self) -> float:

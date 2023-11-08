@@ -1,11 +1,8 @@
 from typing import Sequence
 
 from PySide6 import QtCore, QtQml
-from sqlalchemy.sql import expression
-import sqlalchemy.orm
 
-
-from . import db, utils
+from . import db
 
 QML_IMPORT_NAME = __name__
 QML_IMPORT_MAJOR_VERSION = 1
@@ -36,19 +33,21 @@ class TagModel(QtCore.QAbstractListModel):
 
     def data(self, index, role):
         if not self.checkIndex(index):
-            return
+            return None
 
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self._items[index.row()].name
 
-        elif role == QtCore.Qt.ItemDataRole.BackgroundRole:
+        if role == QtCore.Qt.ItemDataRole.BackgroundRole:
             return self._items[index.row()].color
 
-        elif role == QtCore.Qt.ItemDataRole.UserRole:
+        if role == QtCore.Qt.ItemDataRole.UserRole:
             return self._items[index.row()]
 
-        elif role == QtCore.Qt.ItemDataRole.UserRole + 1:
+        if role == QtCore.Qt.ItemDataRole.UserRole + 1:
             return self._items[index.row()].id
+
+        return None
 
     def roleNames(self):
         return {

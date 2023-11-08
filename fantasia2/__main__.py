@@ -9,15 +9,20 @@ Usage:
     fantasia2 export <path> <exportpath> [--exclude=<excluded_albums>]
 """
 
-from PySide6 import QtCore, QtGui, QtWidgets, QtQml, QtQuickControls2
-import sys, pathlib, docopt, subprocess, re, shutil
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
 
-from alembic import command as alembic_command, config as alembic_config
-import sqlalchemy
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+import docopt
+from alembic import command as alembic_command
+from alembic import config as alembic_config
+from PySide6 import QtCore, QtGui, QtQml, QtQuickControls2, QtWidgets
 from tqdm import tqdm
 
-from . import query_model, db, player, utils, mpris, tag_model
+from . import query_model  # pylint: disable=unused-import
+from . import db, mpris, player, tag_model, utils
 
 SUPPORTED_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".opus", ".m4a", ".mp4"}
 
@@ -27,15 +32,15 @@ def alembic_cfg(instance):
     cfg.set_main_option(
         "script_location", str(pathlib.Path(__file__).parent / "alembic")
     )
-    cfg.attributes["connection"] = instance._engine
+    cfg.attributes["connection"] = instance.engine
     return cfg
 
 
-def export_name_trans(s, strip_dot=False):
-    s = re.sub(r'[<>:"\\|?*\0-\x1f]', "_", s)
+def export_name_trans(name, strip_dot=False):
+    name = re.sub(r'[<>:"\\|?*\0-\x1f]', "_", name)
     if strip_dot:
-        s = s.rstrip(".")
-    return s
+        name = name.rstrip(".")
+    return name
 
 
 def export_ext(ext):
@@ -68,8 +73,8 @@ def convert_ffmpeg(src, dst):
         subprocess.run(
             ["ffmpeg", "-i", src, *extra_args, dst], check=True, capture_output=True
         )
-    except subprocess.CalledProcessError as e:
-        print(e.stderr.decode())
+    except subprocess.CalledProcessError as exc:
+        print(exc.stderr.decode())
         raise RuntimeError("Transcoding failed")
 
 
@@ -109,13 +114,13 @@ def main():
         if args["--resync"]:
             db.Base.metadata.drop_all(instance.engine)
             db.Base.metadata.create_all(instance.engine)
-        with instance.session() as s:
+        with instance.session() as session:
             tracks_on_fs = {
                 f
                 for f in base_dir.rglob("*")
                 if f.is_file() and f.suffix in SUPPORTED_EXTS
             }
-            tracks_in_db = {t.path: t for t in s.query(db.Track).all()}
+            tracks_in_db = {t.path: t for t in session.query(db.Track).all()}
             print(tracks_on_fs - set(tracks_in_db))
             new_track_hashes = {
                 db.hash_file(base_dir / f): f for f in tracks_on_fs - set(tracks_in_db)
@@ -138,7 +143,7 @@ def main():
                     tracks_in_db[new_path] = removed_track
                 else:
                     print(f"Deleted {removed_track.path.relative_to(base_dir)}")
-                    s.delete(removed_track)
+                    session.delete(removed_track)
 
             for added_path in tracks_on_fs - set(tracks_in_db):
                 print(f"Added {added_path}")
@@ -156,12 +161,12 @@ def main():
                             "csv=p=0",
                         ]
                     ).decode()
-                except subprocess.CalledProcessError as e:
-                    print(added_path, e.output.decode())
+                except subprocess.CalledProcessError as exc:
+                    print(added_path, exc.output.decode())
                     print()
                     duration = "nan"
 
-                s.add(
+                session.add(
                     db.Track(
                         name=added_path.stem,
                         folder=added_path.parent.relative_to(base_dir).as_posix(),
@@ -180,12 +185,12 @@ def main():
             else []
         )
         instance = db.F2Instance.from_path(base_dir)
-        with instance.session() as s:
+        with instance.session() as session:
             print("Rendering directory structure")
             paths = {}
             all_paths = set()
 
-            for track in s.query(db.Track).all():
+            for track in session.query(db.Track).all():
                 if track.folder in excluded_albums or any(
                     str(p) in excluded_albums
                     for p in pathlib.Path(track.folder).parents

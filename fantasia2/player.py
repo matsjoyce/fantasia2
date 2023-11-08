@@ -1,10 +1,9 @@
-from typing import Sequence
-import pathlib, sys
+import sys
 
-from PySide6 import QtCore, QtQml, QtMultimedia
+from PySide6 import QtCore, QtMultimedia, QtQml
 from sqlalchemy.orm import object_session
 
-from . import db, query_model
+from . import query_model
 
 QML_IMPORT_NAME = __name__
 QML_IMPORT_MAJOR_VERSION = 1
