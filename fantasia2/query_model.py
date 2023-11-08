@@ -1,0 +1,266 @@
+from typing import Sequence
+import enum
+
+from PySide6 import QtCore, QtQml
+from sqlalchemy.sql import expression
+import sqlalchemy.orm
+
+
+from . import db, utils
+
+QML_IMPORT_NAME = __name__
+QML_IMPORT_MAJOR_VERSION = 1
+
+
+@QtQml.QmlElement
+class TrackModel(QtCore.QAbstractTableModel):
+    HEADERS = ["Album", "Title", "Tags", "Rating", "Duration"]
+    ALBUM_COLUMN, TITLE_COLUMN, TAGS_COLUMN, RATING_COLUMN, DURATION_COLUMN = range(
+        len(HEADERS)
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._items: Sequence[db.Track] = []
+        self.layoutChanged.connect(self.countChanged)
+        self.rowsInserted.connect(self.countChanged)
+        self.modelReset.connect(self.countChanged)
+
+    def columnCount(self, parent: QtCore.QModelIndex) -> int:
+        return len(self.HEADERS) if not parent.isValid() else None
+
+    def rowCount(self, parent: QtCore.QModelIndex) -> int:
+        return len(self._items) if not parent.isValid() else None
+
+    def headerData(self, section, orientation, role):
+        if (
+            orientation == QtCore.Qt.Orientation.Horizontal
+            and role == QtCore.Qt.ItemDataRole.DisplayRole
+        ):
+            return self.HEADERS[section]
+
+    def flags(self, index):
+        return (
+            QtCore.Qt.ItemIsSelectable
+            | QtCore.Qt.ItemIsEnabled
+            | QtCore.Qt.ItemNeverHasChildren
+        )
+
+    def data(self, index, role):
+        if not self.checkIndex(index):
+            return
+
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            match index.column():
+                case self.ALBUM_COLUMN:
+                    return self._items[index.row()].folder
+                case self.TITLE_COLUMN:
+                    return self._items[index.row()].name
+                case self.TAGS_COLUMN:
+                    return ", ".join(t.name for t in self._items[index.row()].tags)
+                case self.RATING_COLUMN:
+                    if self._items[index.row()].rating is None:
+                        return ""
+                    return "★" * self._items[index.row()].rating + "☆" * (
+                        5 - self._items[index.row()].rating
+                    )
+                case self.DURATION_COLUMN:
+                    return utils.format_duration(self._items[index.row()].duration)
+                case _:
+                    return ""
+
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
+            return self._items[index.row()]
+
+    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
+        if not self.checkIndex(index):
+            return
+
+        if role == QtCore.Qt.ItemDataRole.EditRole:
+            match index.column():
+                case self.ALBUM_COLUMN:
+                    return False
+                case self.TITLE_COLUMN:
+                    return False
+                case self.TAGS_COLUMN:
+                    return False
+                case self.RATING_COLUMN:
+                    self._items[index.row()].rating = (
+                        int(value) if value is not None else None
+                    )
+                    sqlalchemy.orm.object_session(self._items[index.row()]).commit()
+                case self.DURATION_COLUMN:
+                    return False
+                case _:
+                    return False
+            self.dataChanged.emit(
+                index,
+                index,
+                [QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.UserRole],
+            )
+            return True
+        return False
+
+    countChanged = QtCore.Signal()
+
+    @QtCore.Property(int, notify=countChanged)
+    def count(self) -> int:
+        return len(self._items)
+
+    @QtCore.Slot(QtCore.QModelIndex, int)
+    def addTag(self, index, tag_id):
+        if not self.checkIndex(index):
+            return
+
+        assert index.column() == self.TAGS_COLUMN
+        sesh = sqlalchemy.orm.object_session(self._items[index.row()])
+        self._items[index.row()].tags.append(sesh.query(db.Tag).get(tag_id))
+        sesh.commit()
+        self.dataChanged.emit(
+            index,
+            index,
+            [QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.UserRole],
+        )
+
+    @QtCore.Slot(QtCore.QModelIndex, int)
+    def removeTag(self, index, tag_id):
+        if not self.checkIndex(index):
+            return
+
+        assert index.column() == self.TAGS_COLUMN
+        sesh = sqlalchemy.orm.object_session(self._items[index.row()])
+        self._items[index.row()].tags.remove(sesh.query(db.Tag).get(tag_id))
+        sesh.commit()
+        self.dataChanged.emit(
+            index,
+            index,
+            [QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.UserRole],
+        )
+
+
+@QtQml.QmlElement
+@QtQml.QmlUncreatable()
+class QueryModel(TrackModel):
+    @QtCore.QEnum
+    class SortOrder(enum.IntEnum):
+        ALPHABETICAL = enum.auto()
+        MOST_PLAYED = enum.auto()
+        RATING = enum.auto()
+        DURATION = enum.auto()
+
+        @property
+        def sql(self):
+            match self:
+                case self.ALPHABETICAL:
+                    return db.Track.folder, db.Track.name
+                case self.MOST_PLAYED:
+                    return (
+                        -db.Track.listenings * db.Track.duration,
+                        -expression.nullslast(db.Track.rating),
+                        db.Track.folder,
+                        db.Track.name,
+                    )
+                case self.RATING:
+                    return (
+                        -expression.nullslast(db.Track.rating),
+                        db.Track.folder,
+                        db.Track.name,
+                    )
+                case self.DURATION:
+                    return (
+                        -db.Track.duration,
+                        db.Track.folder,
+                        db.Track.name,
+                    )
+
+    def __init__(self, session) -> None:
+        super().__init__()
+        self._session = session
+        self._query = ""
+        self._ordering = QueryModel.SortOrder.ALPHABETICAL
+        self._items = session.query(db.Track).order_by(*self._ordering.sql).all()
+
+    queryChanged = QtCore.Signal(name="queryChanged")
+
+    @QtCore.Property(str, notify=queryChanged)
+    def query(self) -> str:
+        return self._query
+
+    @query.setter
+    def query(self, value: str) -> None:
+        self._query = value
+        self.queryChanged.emit()
+        self._refresh()
+
+    orderingChanged = QtCore.Signal(name="orderingChanged")
+
+    @QtCore.Property(int, notify=orderingChanged)
+    def ordering(self) -> int:
+        return self._ordering
+
+    @ordering.setter
+    def ordering(self, value: int) -> None:
+        self._ordering = QueryModel.SortOrder(value)
+        self.orderingChanged.emit()
+        self._refresh()
+
+    def _refresh(self):
+        self._set(
+            self._session.query(db.Track)
+            .filter(
+                db.Track.name.ilike("%" + self._query + "%")
+                | db.Track.folder.ilike("%" + self._query + "%")
+                | db.Track.tags.any(db.Tag.name.ilike("%" + self._query + "%"))
+            )
+            .order_by(*self._ordering.sql)
+            .all()
+        )
+
+    def _set(self, items):
+        # FIXME Maybe layoutChanged does not imply rowCount changed strongly enough?
+        self.layoutAboutToBeChanged.emit()
+        indexList = self.persistentIndexList()
+        ids = {}
+        for i, index in enumerate(indexList):
+            ids.setdefault(self._items[index.row()].id, []).append(i)
+        self._items = items
+        newIndexList = [QtCore.QModelIndex()] * len(indexList)
+        for row, item in enumerate(items):
+            if item.id in ids:
+                for idx in ids[item.id]:
+                    newIndexList[idx] = self.index(row, indexList[idx].column())
+        self.changePersistentIndexList(indexList, newIndexList)
+        self.layoutChanged.emit()
+
+
+@QtQml.QmlElement
+class PlaylistModel(TrackModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self._query = ""
+
+    @QtCore.Slot(list)
+    def appendItems(self, indexes) -> None:
+        # Remove duplicates
+        new_items = []
+        seen_ids = set()
+
+        for idx in indexes:
+            item = idx.data(QtCore.Qt.ItemDataRole.UserRole)
+            if item.id not in seen_ids:
+                seen_ids.add(item.id)
+                new_items.append(item)
+
+        self.beginInsertRows(
+            QtCore.QModelIndex(),
+            len(self._items),
+            len(self._items) + len(new_items) - 1,
+        )
+        self._items = list(self._items) + new_items
+        self.endInsertRows()
+
+    @QtCore.Slot()
+    def clear(self) -> None:
+        self.beginResetModel()
+        self._items = []
+        self.endResetModel()
