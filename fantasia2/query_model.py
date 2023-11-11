@@ -180,7 +180,8 @@ class QueryModel(TrackModel):
         self._session = session
         self._query = ""
         self._ordering = QueryModel.SortOrder.ALPHABETICAL
-        self._items = session.query(db.Track).order_by(*self._ordering.sql).all()
+        self._items = []
+        self.refresh()
 
     queryChanged = QtCore.Signal(name="queryChanged")
 
@@ -192,7 +193,7 @@ class QueryModel(TrackModel):
     def query(self, value: str) -> None:
         self._query = value
         self.queryChanged.emit()
-        self._refresh()
+        self.refresh()
 
     orderingChanged = QtCore.Signal(name="orderingChanged")
 
@@ -204,9 +205,9 @@ class QueryModel(TrackModel):
     def ordering(self, value: int) -> None:
         self._ordering = QueryModel.SortOrder(value)
         self.orderingChanged.emit()
-        self._refresh()
+        self.refresh()
 
-    def _refresh(self):
+    def refresh(self):
         self._set(
             self._session.query(db.Track)
             .filter(

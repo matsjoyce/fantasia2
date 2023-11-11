@@ -2,17 +2,16 @@ import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Controls.Material
 import QtQuick.Layouts as QQL
+import fantasia2.controller as Controller
 import fantasia2.mpris as MPRIS
 import fantasia2.player as Player
 import fantasia2.query_model as QueryModel
-import fantasia2.tag_model as TagModel
 import fantasia2.utils as Utils
 
 QQC.ApplicationWindow {
     id: root
 
-    required property QueryModel.QueryModel queryModel
-    required property TagModel.TagModel tagModel
+    required property Controller.Controller controller
 
     visible: true
     minimumWidth: 1000
@@ -148,8 +147,8 @@ QQC.ApplicationWindow {
                 Library {
                     id: library
 
-                    queryModel: root.queryModel
-                    tagModel: root.tagModel
+                    queryModel: root.controller.queryModel
+                    tagModel: root.controller.tagModel
                     onAddToPlaylist: trackAppendAction.trigger()
                 }
 
@@ -223,6 +222,18 @@ QQC.ApplicationWindow {
 
                 QQC.Label {
                     text: !player.stopped ? "Playing %1".arg(player.currentTrackName) : "Stopped"
+                }
+
+                Item {
+                    QQL.Layout.fillWidth: true
+                }
+
+                QQC.Label {
+                    text: "Syncing library..."
+                    visible: root.controller.syncingLibrary
+                }
+
+                Item {
                     QQL.Layout.fillWidth: true
                 }
 
