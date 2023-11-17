@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQml.Models as QQM
 import QtQuick
 import QtQuick.Controls as QQC
@@ -8,10 +9,10 @@ import fantasia2.query_model as QueryModel
 QQL.ColumnLayout {
     id: root
 
-    required property QueryModel.PlaylistModel playlistModel
     required property int playingIndex
+    required property QueryModel.PlaylistModel playlistModel
 
-    signal clearPlaylist()
+    signal clearPlaylist
 
     spacing: 4
 
@@ -20,55 +21,56 @@ QQL.ColumnLayout {
         QQL.Layout.fillWidth: true
 
         QQC.ToolButton {
-            text: "Clear playlist"
+            enabled: root.playlistModel.count > 0
+            icon.height: 22
             icon.name: "edit-clear-symbolic"
             icon.width: 22
-            icon.height: 22
-            enabled: root.playlistModel.count > 0
+            text: "Clear playlist"
+
             onClicked: root.clearPlaylist()
         }
 
         QQC.ToolButton {
-            text: "Remove item"
+            enabled: false
+            icon.height: 22
             icon.name: "list-remove-symbolic"
             icon.width: 22
-            icon.height: 22
-            enabled: false
+            text: "Remove item"
         }
 
         QQC.ToolSeparator {
         }
 
         QQC.ToolButton {
-            text: "Randomize"
+            enabled: false
+            icon.height: 22
             icon.name: "media-playlist-shuffle-symbolic"
             icon.width: 22
-            icon.height: 22
-            enabled: false
+            text: "Randomize"
         }
 
         QQC.ToolButton {
-            text: "Loop"
+            enabled: false
+            icon.height: 22
             icon.name: "media-playlist-repeat-symbolic"
             icon.width: 22
-            icon.height: 22
-            enabled: false
+            text: "Loop"
         }
 
         Item {
             id: spacer
-        }
 
+        }
     }
 
     QQL.ColumnLayout {
-        spacing: 0
         MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
+        spacing: 0
 
         QQC.HorizontalHeaderView {
             QQL.Layout.fillWidth: true
-            syncView: table
             clip: true
+            syncView: table
         }
 
         QQC.ScrollView {
@@ -76,71 +78,70 @@ QQL.ColumnLayout {
             QQL.Layout.fillWidth: true
             implicitHeight: 50
 
+            background: Rectangle {
+                color: MatControls.Material.background
+            }
+
             TableView {
                 id: table
 
                 QQL.Layout.fillHeight: true
                 QQL.Layout.fillWidth: true
-                model: playlistModel
-                columnWidthProvider: (column) => {
+                clip: true
+                columnWidthProvider: column => {
                     return [1, 2, 1, 0.5, 0.5][column] * table.width / model.columnCount();
                 }
-                clip: true
+                flickableDirection: Flickable.VerticalFlick
+                model: root.playlistModel
 
-                selectionModel: QQM.ItemSelectionModel {
-                }
                 // selectionBehaviour: TableView.SelectRows
 
                 QQC.ScrollBar.vertical: QQC.ScrollBar {
                 }
-
                 delegate: Rectangle {
-                    required property bool selected
-                    required property int row
-                    required property int column
+                    id: delegate
 
-                    implicitWidth: 100
-                    implicitHeight: 30
+                    required property int column
+                    required property string display
+                    required property int row
+                    required property bool selected
+
                     color: selected ? Qt.darker(MatControls.Material.accent) : MatControls.Material.background
+                    implicitHeight: 30
+                    implicitWidth: 100
 
                     QQC.IconLabel {
-                        icon.name: row == playingIndex ? "media-playback-playing" : ""
-                        icon.width: parent.height
+                        icon.color: delegate.selected ? MatControls.Material.foreground : MatControls.Material.accent
                         icon.height: parent.height
-                        icon.color: selected ? MatControls.Material.foreground : MatControls.Material.accent
-                        visible: column == 0
+                        icon.name: delegate.row == root.playingIndex ? "media-playback-playing" : ""
+                        icon.width: parent.height
+                        visible: delegate.column == 0
                     }
 
                     QQC.Label {
                         anchors.fill: parent
                         anchors.leftMargin: parent.height
-                        text: display
-                        verticalAlignment: Text.AlignVCenter
+                        color: delegate.row != root.playingIndex || delegate.selected ? MatControls.Material.foreground : MatControls.Material.accent
                         elide: Text.ElideRight
+                        font.bold: delegate.row == root.playingIndex
                         padding: 2
-                        font.bold: row == playingIndex
-                        color: row != playingIndex || selected ? MatControls.Material.foreground : MatControls.Material.accent
+                        text: delegate.display
+                        verticalAlignment: Text.AlignVCenter
                     }
 
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: table.selectionModel.select(table.model.index(row, column), QQM.ItemSelectionModel.SelectCurrent | QQM.ItemSelectionModel.Rows)
+
+                        onClicked: table.selectionModel.select(table.model.index(delegate.row, delegate.column), QQM.ItemSelectionModel.SelectCurrent | QQM.ItemSelectionModel.Rows)
                     }
-
                 }
-
+                selectionModel: QQM.ItemSelectionModel {
+                }
             }
 
             QQC.SelectionRectangle {
                 target: table
             }
-
-            background: Rectangle {
-                color: MatControls.Material.background
-            }
-
         }
-
     }
-
 }

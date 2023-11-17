@@ -20,8 +20,8 @@ class Controller(QtCore.QObject):
         self._instance = instance
 
         self._sync_timer = QtCore.QTimer(self)
-        self._sync_timer.setInterval(10 * 60 * 1000)  # Every 10 mins, resync
         self._sync_timer.timeout.connect(self.syncLibrary)
+        self._sync_timer.start(10 * 60 * 1000)  # Every 10 mins, resync
 
         self.syncingLibraryChanged.connect(self._refresh_model_when_sync_done)
         self.syncLibrary()

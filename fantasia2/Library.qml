@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQml.Models as QQM
 import QtQuick 6.4
 import QtQuick.Controls as QQC
@@ -10,10 +11,10 @@ QQL.ColumnLayout {
     id: root
 
     required property QueryModel.QueryModel queryModel
-    required property TagModel.TagModel tagModel
     property alias selectedIndexes: table.selectionModel.selectedIndexes
+    required property TagModel.TagModel tagModel
 
-    signal addToPlaylist()
+    signal addToPlaylist
 
     spacing: 4
 
@@ -22,11 +23,12 @@ QQL.ColumnLayout {
         QQL.Layout.fillWidth: true
 
         QQC.ToolButton {
-            text: "Add to playlist"
+            enabled: root.selectedIndexes.length > 0
+            icon.height: 22
             icon.name: "list-add-symbolic"
             icon.width: 22
-            icon.height: 22
-            enabled: root.selectedIndexes.length > 0
+            text: "Add to playlist"
+
             onClicked: root.addToPlaylist()
         }
 
@@ -34,11 +36,12 @@ QQL.ColumnLayout {
         }
 
         QQC.ToolButton {
-            text: "Add tag"
+            enabled: root.selectedIndexes.length > 0
+            icon.height: 22
             icon.name: "tag-new"
             icon.width: 22
-            icon.height: 22
-            enabled: root.selectedIndexes.length > 0
+            text: "Add tag"
+
             onClicked: addTagMenu.open()
 
             QQC.Menu {
@@ -50,35 +53,35 @@ QQL.ColumnLayout {
                     model: root.tagModel
 
                     QQC.MenuItem {
-                        required property string name
+                        id: addTagDelegate
+
                         required property color color
                         required property int id
+                        required property string name
 
                         text: name
-                        onClicked: root.selectedIndexes.filter((idx) => {
-                            return idx.column == 2;
-                        }).forEach((idx) => {
-                            return idx.model.addTag(idx, id);
-                        })
 
                         background: Rectangle {
-                            color: parent.color
+                            color: addTagDelegate.color
                         }
 
+                        onClicked: root.selectedIndexes.filter(idx => {
+                                return idx.column == 2;
+                            }).forEach(idx => {
+                                return idx.model.addTag(idx, id);
+                            })
                     }
-
                 }
-
             }
-
         }
 
         QQC.ToolButton {
-            text: "Remove tag"
+            enabled: root.selectedIndexes.length > 0
+            icon.height: 22
             icon.name: "tag-delete"
             icon.width: 22
-            icon.height: 22
-            enabled: root.selectedIndexes.length > 0
+            text: "Remove tag"
+
             onClicked: removeTagMenu.open()
 
             QQC.Menu {
@@ -90,38 +93,38 @@ QQL.ColumnLayout {
                     model: root.tagModel
 
                     QQC.MenuItem {
-                        required property string name
+                        id: removeTagDelegate
+
                         required property color color
                         required property int id
+                        required property string name
 
                         text: name
-                        onClicked: root.selectedIndexes.filter((idx) => {
-                            return idx.column == 2;
-                        }).forEach((idx) => {
-                            return idx.model.removeTag(idx, id);
-                        })
 
                         background: Rectangle {
-                            color: parent.color
+                            color: removeTagDelegate.color
                         }
 
+                        onClicked: root.selectedIndexes.filter(idx => {
+                                return idx.column == 2;
+                            }).forEach(idx => {
+                                return idx.model.removeTag(idx, id);
+                            })
                     }
-
                 }
-
             }
-
         }
 
         QQC.ToolSeparator {
         }
 
         QQC.ToolButton {
-            text: "Rate"
+            enabled: root.selectedIndexes.length > 0
+            icon.height: 22
             icon.name: "rating-half"
             icon.width: 22
-            icon.height: 22
-            enabled: root.selectedIndexes.length > 0
+            text: "Rate"
+
             onClicked: ratingMenu.open()
 
             QQC.Menu {
@@ -133,27 +136,28 @@ QQL.ColumnLayout {
                     model: 6
 
                     QQC.MenuItem {
-                        text: "★".repeat(5 - index) + "☆".repeat(index)
-                        onClicked: root.selectedIndexes.filter((idx) => {
-                            return idx.column == 3;
-                        }).forEach((idx) => {
-                            return idx.model.setData(idx, 5 - index);
-                        })
-                    }
+                        required property int index
 
+                        text: "★".repeat(5 - index) + "☆".repeat(index)
+
+                        onClicked: root.selectedIndexes.filter(idx => {
+                                return idx.column == 3;
+                            }).forEach(idx => {
+                                return idx.model.setData(idx, 5 - index);
+                            })
+                    }
                 }
 
                 QQC.MenuItem {
                     text: "No rating"
-                    onClicked: root.selectedIndexes.filter((idx) => {
-                        return idx.column == 3;
-                    }).forEach((idx) => {
-                        return idx.model.setData(idx, null);
-                    })
+
+                    onClicked: root.selectedIndexes.filter(idx => {
+                            return idx.column == 3;
+                        }).forEach(idx => {
+                            return idx.model.setData(idx, null);
+                        })
                 }
-
             }
-
         }
 
         Item {
@@ -165,36 +169,36 @@ QQL.ColumnLayout {
         QQC.ComboBox {
             QQL.Layout.minimumWidth: 200
             implicitHeight: 40
+            model: [{
+                    "value": QueryModel.QueryModel.SortOrder.ALPHABETICAL,
+                    "text": qsTr("Alphabetical")
+                }, {
+                    "value": QueryModel.QueryModel.SortOrder.MOST_PLAYED,
+                    "text": qsTr("Most played")
+                }, {
+                    "value": QueryModel.QueryModel.SortOrder.RATING,
+                    "text": qsTr("Rating")
+                }, {
+                    "value": QueryModel.QueryModel.SortOrder.DURATION,
+                    "text": qsTr("Duration")
+                }]
             textRole: "text"
             valueRole: "value"
-            onActivated: root.queryModel.ordering = currentValue
-            Component.onCompleted: currentIndex = indexOfValue(root.queryModel.ordering)
-            model: [{
-                "value": QueryModel.QueryModel.SortOrder.ALPHABETICAL,
-                "text": qsTr("Alphabetical")
-            }, {
-                "value": QueryModel.QueryModel.SortOrder.MOST_PLAYED,
-                "text": qsTr("Most played")
-            }, {
-                "value": QueryModel.QueryModel.SortOrder.RATING,
-                "text": qsTr("Rating")
-            }, {
-                "value": QueryModel.QueryModel.SortOrder.DURATION,
-                "text": qsTr("Duration")
-            }]
-        }
 
+            Component.onCompleted: currentIndex = indexOfValue(root.queryModel.ordering)
+            onActivated: root.queryModel.ordering = currentValue
+        }
     }
 
     QQL.ColumnLayout {
-        spacing: 0
         MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
+        spacing: 0
 
         QQC.HorizontalHeaderView {
             QQL.Layout.fillWidth: true
-            syncView: table
-            implicitHeight: 30
             clip: true
+            implicitHeight: 30
+            syncView: table
         }
 
         QQC.ScrollView {
@@ -202,62 +206,61 @@ QQL.ColumnLayout {
             QQL.Layout.fillWidth: true
             implicitHeight: 50
 
+            background: Rectangle {
+                color: MatControls.Material.background
+            }
+
             TableView {
                 id: table
 
                 QQL.Layout.fillHeight: true
                 QQL.Layout.fillWidth: true
-                model: queryModel
+                clip: true
                 // interactive: false
-                columnWidthProvider: (column) => {
+                columnWidthProvider: column => {
                     return [1, 2, 1, 0.5, 0.5][column] * table.width / model.columnCount();
                 }
-                clip: true
+                flickableDirection: Flickable.VerticalFlick
+                model: root.queryModel
                 selectionBehavior: TableView.SelectRows
 
+                QQC.ScrollBar.vertical: QQC.ScrollBar {
+                }
+                delegate: Rectangle {
+                    id: delegate
+
+                    required property int column
+                    required property bool current
+                    required property string display
+                    required property int row
+                    required property bool selected
+
+                    color: selected ? Qt.darker(MatControls.Material.accent) : "transparent"
+                    implicitHeight: 30
+                    implicitWidth: 100
+
+                    QQC.Label {
+                        anchors.fill: parent
+                        elide: Text.ElideRight
+                        horizontalAlignment: delegate.column >= 3 ? Text.AlignHCenter : Text.AlignLeft
+                        padding: 2
+                        text: delegate.display
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
                 selectionModel: QQM.ItemSelectionModel {
                     model: table.model
+
                     onCurrentChanged: (curr, prev) => {
                         return select(curr, ItemSelectionModel.Select | ItemSelectionModel.Rows);
                     }
                 }
-
-                QQC.ScrollBar.vertical: QQC.ScrollBar {
-                }
-
-                delegate: Rectangle {
-                    required property bool selected
-                    required property bool current
-                    required property int row
-                    required property int column
-
-                    implicitWidth: 100
-                    implicitHeight: 30
-                    color: selected ? Qt.darker(MatControls.Material.accent) : "transparent"
-
-                    QQC.Label {
-                        anchors.fill: parent
-                        text: display
-                        verticalAlignment: Text.AlignVCenter
-                        horizontalAlignment: column >= 3 ? Text.AlignHCenter : Text.AlignLeft
-                        elide: Text.ElideRight
-                        padding: 2
-                    }
-
-                }
-
             }
 
             QQC.SelectionRectangle {
                 target: table
             }
-
-            background: Rectangle {
-                color: MatControls.Material.background
-            }
-
         }
-
     }
 
     Item {
@@ -266,9 +269,9 @@ QQL.ColumnLayout {
 
     QQC.TextField {
         QQL.Layout.fillWidth: true
-        text: root.queryModel.query
-        onTextEdited: root.queryModel.query = text
         placeholderText: qsTr("Search library")
-    }
+        text: root.queryModel.query
 
+        onTextEdited: root.queryModel.query = text
+    }
 }

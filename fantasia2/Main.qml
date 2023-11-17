@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Controls.Material
@@ -13,14 +14,15 @@ QQC.ApplicationWindow {
 
     required property Controller.Controller controller
 
-    visible: true
-    minimumWidth: 1000
-    minimumHeight: 600
-    Material.theme: Material.Dark
     Material.accent: Material.color(Material.Red, Material.Shade500)
+    Material.theme: Material.Dark
+    minimumHeight: 450
+    minimumWidth: 800
+    visible: true
 
     QueryModel.PlaylistModel {
         id: playlistModel
+
     }
 
     Player.Player {
@@ -31,80 +33,90 @@ QQC.ApplicationWindow {
 
     MPRIS.MPRIS {
         player: player
-        onRaiseRequested: root.raise()
+
         onFullscreenRequested: root.showFullScreen()
+        onRaiseRequested: root.raise()
     }
 
     Shortcut {
         sequence: StandardKey.Quit
+
         onActivated: root.close()
     }
 
     QQC.Action {
         id: playPauseAction
 
-        icon.name: player.playing ? "media-playback-pause" : player.stopped ? "media-playlist-repeat-symbolic" : "media-playback-start"
-        onTriggered: player.togglePlaying()
         enabled: playlistModel.count > 0
+        icon.name: player.playing ? "media-playback-pause" : player.stopped ? "media-playlist-repeat-symbolic" : "media-playback-start"
         shortcut: "Space"
+
+        onTriggered: player.togglePlaying()
     }
 
     QQC.Action {
         id: stopAction
 
-        icon.name: "media-playback-stop"
-        onTriggered: player.stop()
         enabled: playlistModel.count > 0
+        icon.name: "media-playback-stop"
+
+        onTriggered: player.stop()
     }
 
     QQC.Action {
         id: skipBackwardAction
 
-        icon.name: "media-skip-backward"
-        onTriggered: player.previous_track()
         enabled: playlistModel.count > 0
+        icon.name: "media-skip-backward"
+
+        onTriggered: player.previous_track()
     }
 
     QQC.Action {
         id: seekBackwardAction
 
-        icon.name: "media-seek-backward"
-        onTriggered: player.position -= 10
         enabled: !player.stopped
+        icon.name: "media-seek-backward"
         shortcut: "Left"
+
+        onTriggered: player.position -= 10
     }
 
     QQC.Action {
         id: seekForwardAction
 
-        icon.name: "media-seek-forward"
-        onTriggered: player.position += 10
         enabled: !player.stopped
+        icon.name: "media-seek-forward"
         shortcut: "Right"
+
+        onTriggered: player.position += 10
     }
 
     QQC.Action {
         id: skipForwardAction
 
-        icon.name: "media-skip-forward"
-        onTriggered: player.next_track()
         enabled: playlistModel.count > 0
+        icon.name: "media-skip-forward"
+
+        onTriggered: player.next_track()
     }
 
     QQC.Action {
         id: trackAppendAction
 
         icon.name: "media-playlist-append"
-        onTriggered: tabBar.currentIndex == 1 && playlistModel.appendItems(library.selectedIndexes)
         shortcut: "Return"
+
+        onTriggered: tabBar.currentIndex == 1 && playlistModel.appendItems(library.selectedIndexes)
     }
 
     QQC.Action {
         id: clearAction
 
         icon.name: "edit-clear-list"
-        onTriggered: playlistModel.clear()
         shortcut: "Ctrl+C"
+
+        onTriggered: playlistModel.clear()
     }
 
     QQL.ColumnLayout {
@@ -122,12 +134,10 @@ QQC.ApplicationWindow {
                 QQC.TabButton {
                     required property string modelData
 
-                    text: modelData
                     implicitWidth: tabBar.width / 2
+                    text: modelData
                 }
-
             }
-
         }
 
         QQC.Frame {
@@ -139,8 +149,9 @@ QQC.ApplicationWindow {
                 currentIndex: tabBar.currentIndex
 
                 Playlist {
-                    playlistModel: playlistModel
                     playingIndex: player.currentTrackIndex
+                    playlistModel: playlistModel
+
                     onClearPlaylist: clearAction.trigger()
                 }
 
@@ -149,30 +160,29 @@ QQC.ApplicationWindow {
 
                     queryModel: root.controller.queryModel
                     tagModel: root.controller.tagModel
+
                     onAddToPlaylist: trackAppendAction.trigger()
                 }
-
             }
-
         }
 
         QQL.RowLayout {
             QQL.Layout.fillHeight: false
             QQL.Layout.fillWidth: true
-            QQL.Layout.minimumHeight: 64
             QQL.Layout.leftMargin: 8
+            QQL.Layout.minimumHeight: 64
             QQL.Layout.rightMargin: 8
 
             QQC.ToolButton {
                 action: playPauseAction
-                icon.width: 36
                 icon.height: 36
+                icon.width: 36
             }
 
             QQC.ToolButton {
                 action: stopAction
-                icon.width: 36
                 icon.height: 36
+                icon.width: 36
             }
 
             QQC.ToolSeparator {
@@ -180,52 +190,55 @@ QQC.ApplicationWindow {
 
             QQC.ToolButton {
                 action: skipBackwardAction
-                icon.width: 36
                 icon.height: 36
+                icon.width: 36
             }
 
             QQC.ToolButton {
                 action: seekBackwardAction
-                icon.width: 36
                 icon.height: 36
+                icon.width: 36
             }
 
             QQC.Slider {
                 QQL.Layout.fillWidth: true
+                enabled: !player.stopped
                 from: 0
+                stepSize: 5
                 to: player.duration
                 value: player.stopped ? 0 : player.position
+
                 onMoved: player.position = value
-                stepSize: 5
-                enabled: !player.stopped
             }
 
             QQC.ToolButton {
                 action: seekForwardAction
-                icon.width: 36
                 icon.height: 36
+                icon.width: 36
             }
 
             QQC.ToolButton {
                 action: skipForwardAction
-                icon.width: 36
                 icon.height: 36
+                icon.width: 36
             }
-
         }
 
         QQC.Frame {
             QQL.Layout.fillWidth: true
 
+            background: Rectangle {
+                color: "black"
+            }
+
             QQL.RowLayout {
                 anchors.fill: parent
 
                 QQC.Label {
-                    text: !player.stopped ? "Playing %1".arg(player.currentTrackName) : "Stopped"
-                }
-
-                Item {
                     QQL.Layout.fillWidth: true
+                    QQL.Layout.preferredWidth: 100
+                    elide: Text.ElideRight
+                    text: !player.stopped ? "Playing %1".arg(player.currentTrackName) : "Stopped"
                 }
 
                 QQC.Label {
@@ -233,22 +246,13 @@ QQC.ApplicationWindow {
                     visible: root.controller.syncingLibrary
                 }
 
-                Item {
-                    QQL.Layout.fillWidth: true
-                }
-
                 QQC.Label {
+                    QQL.Layout.fillWidth: true
+                    QQL.Layout.preferredWidth: 100
+                    horizontalAlignment: Text.AlignRight
                     text: "%1 / %2".arg(player.stopped ? "--" : Utils.Utils.formatDuration(player.position)).arg(player.stopped ? "--" : Utils.Utils.formatDuration(player.duration))
                 }
-
             }
-
-            background: Rectangle {
-                color: "black"
-            }
-
         }
-
     }
-
 }
