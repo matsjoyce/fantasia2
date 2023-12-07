@@ -14,57 +14,65 @@ QQL.ColumnLayout {
 
     signal clearPlaylist
 
-    spacing: 4
+    spacing: 0
 
-    QQL.RowLayout {
+    QQC.ToolBar {
+        MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
         QQL.Layout.fillHeight: false
         QQL.Layout.fillWidth: true
+        leftPadding: 4
+        rightPadding: 4
 
-        QQC.ToolButton {
-            enabled: root.playlistModel.count > 0
-            icon.height: 22
-            icon.name: "edit-clear-symbolic"
-            icon.width: 22
-            text: "Clear playlist"
+        QQL.RowLayout {
+            anchors.fill: parent
 
-            onClicked: root.clearPlaylist()
-        }
+            QQC.ToolButton {
+                enabled: root.playlistModel.count > 0
+                icon.height: 22
+                icon.name: "edit-clear-symbolic"
+                icon.width: 22
+                text: "Clear playlist"
 
-        QQC.ToolButton {
-            enabled: false
-            icon.height: 22
-            icon.name: "list-remove-symbolic"
-            icon.width: 22
-            text: "Remove item"
-        }
+                onClicked: root.clearPlaylist()
+            }
 
-        QQC.ToolSeparator {
-        }
+            QQC.ToolButton {
+                enabled: false
+                icon.height: 22
+                icon.name: "list-remove-symbolic"
+                icon.width: 22
+                text: "Remove item"
+            }
 
-        QQC.ToolButton {
-            enabled: false
-            icon.height: 22
-            icon.name: "media-playlist-shuffle-symbolic"
-            icon.width: 22
-            text: "Randomize"
-        }
+            QQC.ToolSeparator {
+            }
 
-        QQC.ToolButton {
-            enabled: false
-            icon.height: 22
-            icon.name: "media-playlist-repeat-symbolic"
-            icon.width: 22
-            text: "Loop"
-        }
+            QQC.ToolButton {
+                enabled: false
+                icon.height: 22
+                icon.name: "media-playlist-shuffle-symbolic"
+                icon.width: 22
+                text: "Randomize"
+            }
 
-        Item {
-            id: spacer
+            QQC.ToolButton {
+                enabled: false
+                icon.height: 22
+                icon.name: "media-playlist-repeat-symbolic"
+                icon.width: 22
+                text: "Loop"
+            }
 
+            Item {
+                id: spacer
+
+                QQL.Layout.fillWidth: true
+            }
         }
     }
 
     QQL.ColumnLayout {
-        MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
+        QQL.Layout.margins: 4
         spacing: 0
 
         QQC.HorizontalHeaderView {
@@ -73,20 +81,23 @@ QQL.ColumnLayout {
             syncView: table
         }
 
+        Rectangle {
+            QQL.Layout.fillWidth: true
+            color: Qt.lighter(parent.MatControls.Material.background)
+            height: 2
+        }
+
         QQC.ScrollView {
             QQL.Layout.fillHeight: true
             QQL.Layout.fillWidth: true
             implicitHeight: 50
-
-            background: Rectangle {
-                color: MatControls.Material.background
-            }
 
             TableView {
                 id: table
 
                 QQL.Layout.fillHeight: true
                 QQL.Layout.fillWidth: true
+                boundsBehavior: Flickable.StopAtBounds
                 clip: true
                 columnWidthProvider: column => {
                     return [1, 2, 1, 0.5, 0.5][column] * table.width / model.columnCount();

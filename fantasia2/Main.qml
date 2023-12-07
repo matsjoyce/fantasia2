@@ -20,6 +20,43 @@ QQC.ApplicationWindow {
     minimumWidth: 800
     visible: true
 
+    footer: QQL.RowLayout {
+        QQC.Label {
+            QQL.Layout.fillWidth: true
+            QQL.Layout.margins: 4
+            QQL.Layout.preferredWidth: 100
+            elide: Text.ElideRight
+            text: !player.stopped ? "Playing %1".arg(player.currentTrackName) : "Stopped"
+        }
+
+        QQC.Label {
+            QQL.Layout.margins: 4
+            text: "Syncing library..."
+            visible: root.controller.syncingLibrary
+        }
+
+        QQC.Label {
+            QQL.Layout.fillWidth: true
+            QQL.Layout.margins: 4
+            QQL.Layout.preferredWidth: 100
+            horizontalAlignment: Text.AlignRight
+            text: player.stopped ? "-- / --" : "%1 / %2".arg(Utils.Utils.formatDuration(player.position)).arg(Utils.Utils.formatDuration(player.duration))
+        }
+    }
+    header: QQC.TabBar {
+        id: tabBar
+
+        Repeater {
+            model: ["Playlist", "Library"]
+
+            QQC.TabButton {
+                required property string modelData
+
+                text: modelData
+            }
+        }
+    }
+
     QueryModel.PlaylistModel {
         id: playlistModel
 
@@ -121,136 +158,86 @@ QQC.ApplicationWindow {
 
     QQL.ColumnLayout {
         anchors.fill: parent
-        anchors.topMargin: 4
 
-        QQC.TabBar {
-            id: tabBar
-
-            QQL.Layout.fillWidth: true
-
-            Repeater {
-                model: ["Playlist", "Library"]
-
-                QQC.TabButton {
-                    required property string modelData
-
-                    implicitWidth: parent.width / 2
-                    text: modelData
-                }
-            }
-        }
-
-        QQC.Frame {
+        QQL.StackLayout {
             QQL.Layout.fillHeight: true
             QQL.Layout.fillWidth: true
+            currentIndex: tabBar.currentIndex
 
-            QQL.StackLayout {
-                anchors.fill: parent
-                currentIndex: tabBar.currentIndex
+            Playlist {
+                playingIndex: player.currentTrackIndex
+                playlistModel: playlistModel
 
-                Playlist {
-                    playingIndex: player.currentTrackIndex
-                    playlistModel: playlistModel
+                onClearPlaylist: clearAction.trigger()
+            }
 
-                    onClearPlaylist: clearAction.trigger()
-                }
+            Library {
+                id: library
 
-                Library {
-                    id: library
+                queryModel: root.controller.queryModel
+                tagModel: root.controller.tagModel
 
-                    queryModel: root.controller.queryModel
-                    tagModel: root.controller.tagModel
-
-                    onAddToPlaylist: trackAppendAction.trigger()
-                }
+                onAddToPlaylist: trackAppendAction.trigger()
             }
         }
 
-        QQL.RowLayout {
+        QQC.ToolBar {
+            MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
             QQL.Layout.fillHeight: false
             QQL.Layout.fillWidth: true
-            QQL.Layout.leftMargin: 8
-            QQL.Layout.minimumHeight: 64
-            QQL.Layout.rightMargin: 8
-
-            QQC.ToolButton {
-                action: playPauseAction
-                icon.height: 36
-                icon.width: 36
-            }
-
-            QQC.ToolButton {
-                action: stopAction
-                icon.height: 36
-                icon.width: 36
-            }
-
-            QQC.ToolSeparator {
-            }
-
-            QQC.ToolButton {
-                action: skipBackwardAction
-                icon.height: 36
-                icon.width: 36
-            }
-
-            QQC.ToolButton {
-                action: seekBackwardAction
-                icon.height: 36
-                icon.width: 36
-            }
-
-            QQC.Slider {
-                QQL.Layout.fillWidth: true
-                enabled: !player.stopped
-                from: 0
-                stepSize: 5
-                to: player.duration
-                value: player.stopped ? 0 : player.position
-
-                onMoved: player.position = value
-            }
-
-            QQC.ToolButton {
-                action: seekForwardAction
-                icon.height: 36
-                icon.width: 36
-            }
-
-            QQC.ToolButton {
-                action: skipForwardAction
-                icon.height: 36
-                icon.width: 36
-            }
-        }
-
-        QQC.Frame {
-            QQL.Layout.fillWidth: true
-
-            background: Rectangle {
-                color: "black"
-            }
+            padding: 8
 
             QQL.RowLayout {
                 anchors.fill: parent
 
-                QQC.Label {
-                    QQL.Layout.fillWidth: true
-                    QQL.Layout.preferredWidth: 100
-                    elide: Text.ElideRight
-                    text: !player.stopped ? "Playing %1".arg(player.currentTrackName) : "Stopped"
+                QQC.ToolButton {
+                    action: playPauseAction
+                    icon.height: 36
+                    icon.width: 36
                 }
 
-                QQC.Label {
-                    text: "Syncing library..."
-                    visible: root.controller.syncingLibrary
+                QQC.ToolButton {
+                    action: stopAction
+                    icon.height: 36
+                    icon.width: 36
                 }
 
-                QQC.Label {
+                QQC.ToolSeparator {
+                }
+
+                QQC.ToolButton {
+                    action: skipBackwardAction
+                    icon.height: 36
+                    icon.width: 36
+                }
+
+                QQC.ToolButton {
+                    action: seekBackwardAction
+                    icon.height: 36
+                    icon.width: 36
+                }
+
+                QQC.Slider {
                     QQL.Layout.fillWidth: true
-                    QQL.Layout.preferredWidth: 100
-                    horizontalAlignment: Text.AlignRight
-                    text: player.stopped ? "-- / --" : "%1 / %2".arg(Utils.Utils.formatDuration(player.position)).arg(Utils.Utils.formatDuration(player.duration))
+                    enabled: !player.stopped
+                    from: 0
+                    stepSize: 5
+                    to: player.duration
+                    value: player.stopped ? 0 : player.position
+
+                    onMoved: player.position = value
+                }
+
+                QQC.ToolButton {
+                    action: seekForwardAction
+                    icon.height: 36
+                    icon.width: 36
+                }
+
+                QQC.ToolButton {
+                    action: skipForwardAction
+                    icon.height: 36
+                    icon.width: 36
                 }
             }
         }
