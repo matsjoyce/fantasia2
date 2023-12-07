@@ -93,8 +93,7 @@ QQL.ColumnLayout {
                 }
                 flickableDirection: Flickable.VerticalFlick
                 model: root.playlistModel
-
-                // selectionBehaviour: TableView.SelectRows
+                selectionBehavior: TableView.SelectRows
 
                 QQC.ScrollBar.vertical: QQC.ScrollBar {
                 }

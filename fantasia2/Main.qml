@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as QQC
-import QtQuick.Controls.Material
+import QtQuick.Controls.Material as MatControls
 import QtQuick.Layouts as QQL
 import fantasia2.controller as Controller
 import fantasia2.mpris as MPRIS
@@ -14,8 +14,8 @@ QQC.ApplicationWindow {
 
     required property Controller.Controller controller
 
-    Material.accent: Material.color(Material.Red, Material.Shade500)
-    Material.theme: Material.Dark
+    MatControls.Material.accent: MatControls.Material.color(MatControls.Material.Red, MatControls.Material.Shade500)
+    MatControls.Material.theme: MatControls.Material.Dark
     minimumHeight: 450
     minimumWidth: 800
     visible: true
@@ -134,7 +134,7 @@ QQC.ApplicationWindow {
                 QQC.TabButton {
                     required property string modelData
 
-                    implicitWidth: tabBar.width / 2
+                    implicitWidth: parent.width / 2
                     text: modelData
                 }
             }
@@ -250,7 +250,7 @@ QQC.ApplicationWindow {
                     QQL.Layout.fillWidth: true
                     QQL.Layout.preferredWidth: 100
                     horizontalAlignment: Text.AlignRight
-                    text: "%1 / %2".arg(player.stopped ? "--" : Utils.Utils.formatDuration(player.position)).arg(player.stopped ? "--" : Utils.Utils.formatDuration(player.duration))
+                    text: player.stopped ? "-- / --" : "%1 / %2".arg(Utils.Utils.formatDuration(player.position)).arg(Utils.Utils.formatDuration(player.duration))
                 }
             }
         }
