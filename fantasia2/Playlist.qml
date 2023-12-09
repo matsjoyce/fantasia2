@@ -84,7 +84,7 @@ QQL.ColumnLayout {
         Rectangle {
             QQL.Layout.fillWidth: true
             color: Qt.lighter(parent.MatControls.Material.background)
-            height: 2
+            implicitHeight: 2
         }
 
         QQC.ScrollView {
