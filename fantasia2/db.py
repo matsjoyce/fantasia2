@@ -35,14 +35,14 @@ class Tag(Base):
     __tablename__ = "tag"
     id = Column(Integer, primary_key=True)
 
-    parent_id = Column(Integer, ForeignKey("tag.id"))
+    parent_id = Column(Integer, ForeignKey("tag.id"), nullable=True)
     children = relationship("Tag", back_populates="parent")
     parent = relationship("Tag", back_populates="children", remote_side=[id])
 
     tracks = relationship("Track", secondary="track_to_tags", back_populates="tags")
 
     name = Column(String(100), nullable=False)
-    color_bytes = Column(BINARY(3))
+    color_bytes = Column(BINARY(3), nullable=True)
 
     @property
     def color(self) -> QtGui.QColor:
@@ -60,8 +60,8 @@ class Track(Base):
     name = Column(String(100), nullable=False)
     extension = Column(String(100), nullable=False)
     duration = Column(Float, nullable=False)
-    file_hash = Column(BINARY(32))
-    rating = Column(Integer)
+    file_hash = Column(BINARY(32), nullable=False)
+    rating = Column(Integer, nullable=True)
     tags = relationship("Tag", secondary="track_to_tags", back_populates="tracks")
     listenings = Column(Integer, nullable=False, server_default="0")
 

@@ -78,14 +78,15 @@ def sync_database_with_fs(instance: db.F2Instance):
         }
         tracks_in_db = {t.path: t for t in session.query(db.Track).all()}
         new_track_hashes = {
-            db.hash_file(base_dir / f): f for f in tracks_on_fs - set(tracks_in_db)
+            f: db.hash_file(base_dir / f) for f in tracks_on_fs - set(tracks_in_db)
         }
+        reverse_track_hashes = {h: f for f, h in new_track_hashes.items()}
 
         for removed_path in set(tracks_in_db) - tracks_on_fs:
             removed_track = tracks_in_db[removed_path]
-            if removed_track.file_hash in new_track_hashes:
+            if removed_track.file_hash in reverse_track_hashes:
                 tracks_in_db.pop(removed_path)
-                new_path = new_track_hashes[removed_track.file_hash]
+                new_path = reverse_track_hashes[removed_track.file_hash]
                 print(
                     f"Moved {removed_track.path.relative_to(base_dir)} to {new_path.relative_to(base_dir)}"
                 )
@@ -126,6 +127,7 @@ def sync_database_with_fs(instance: db.F2Instance):
                     extension=added_path.suffix,
                     duration=float(duration),
                     rating=None,
+                    file_hash=new_track_hashes[added_path],
                 )
             )
 

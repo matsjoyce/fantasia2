@@ -21,7 +21,7 @@ class Controller(QtCore.QObject):
 
         self._sync_timer = QtCore.QTimer(self)
         self._sync_timer.timeout.connect(self.syncLibrary)
-        self._sync_timer.start(10 * 60 * 1000)  # Every 10 mins, resync
+        self._sync_timer.start(5 * 60 * 1000)  # Every 5 mins, resync
 
         self.syncingLibraryChanged.connect(self._refresh_model_when_sync_done)
         self.syncLibrary()
@@ -52,9 +52,7 @@ class Controller(QtCore.QObject):
         if self._syncing:
             return
         self._set_syncing(True)
-        print("Starting resync...")
         utils.sync_database_with_fs(self._instance)
-        print("Resync done")
         self._set_syncing(False)
 
     @QtCore.Slot()
