@@ -37,30 +37,12 @@ QQL.ColumnLayout {
             }
 
             QQC.ToolButton {
-                enabled: false
                 icon.height: 22
                 icon.name: "list-remove-symbolic"
                 icon.width: 22
                 text: "Remove item"
-            }
 
-            QQC.ToolSeparator {
-            }
-
-            QQC.ToolButton {
-                enabled: false
-                icon.height: 22
-                icon.name: "media-playlist-shuffle-symbolic"
-                icon.width: 22
-                text: "Randomize"
-            }
-
-            QQC.ToolButton {
-                enabled: false
-                icon.height: 22
-                icon.name: "media-playlist-repeat-symbolic"
-                icon.width: 22
-                text: "Loop"
+                onClicked: [...new Set(table.selectionModel.selectedIndexes.map(idx => idx.row))].sort((a, b) => b - a).map(row => root.playlistModel.removeRow(row))
             }
 
             Item {
@@ -116,7 +98,7 @@ QQL.ColumnLayout {
                     required property int row
                     required property bool selected
 
-                    color: selected ? Qt.darker(MatControls.Material.accent) : MatControls.Material.background
+                    color: selected ? Qt.darker(MatControls.Material.accent) : "transparent"
                     implicitHeight: 30
                     implicitWidth: 100
 
@@ -134,18 +116,18 @@ QQL.ColumnLayout {
                         color: delegate.row != root.playingIndex || delegate.selected ? MatControls.Material.foreground : MatControls.Material.accent
                         elide: Text.ElideRight
                         font.bold: delegate.row == root.playingIndex
+                        horizontalAlignment: delegate.column >= 3 ? Text.AlignHCenter : Text.AlignLeft
                         padding: 2
                         text: delegate.display
                         verticalAlignment: Text.AlignVCenter
                     }
-
-                    MouseArea {
-                        anchors.fill: parent
-
-                        onClicked: table.selectionModel.select(table.model.index(delegate.row, delegate.column), QQM.ItemSelectionModel.SelectCurrent | QQM.ItemSelectionModel.Rows)
-                    }
                 }
                 selectionModel: QQM.ItemSelectionModel {
+                    model: table.model
+
+                    onCurrentChanged: (curr, prev) => {
+                        return select(curr, ItemSelectionModel.Select | ItemSelectionModel.Rows);
+                    }
                 }
             }
 

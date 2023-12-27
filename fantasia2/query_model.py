@@ -262,6 +262,12 @@ class PlaylistModel(TrackModel):
         self._items = list(self._items) + new_items
         self.endInsertRows()
 
+    def removeRows(self, row, count, parent=QtCore.QModelIndex()) -> bool:
+        self.beginRemoveRows(parent, row, row + count - 1)
+        self._items = self._items[:row] + self._items[row + count :]
+        self.endRemoveRows()
+        return True
+
     @QtCore.Slot()
     def clear(self) -> None:
         self.beginResetModel()

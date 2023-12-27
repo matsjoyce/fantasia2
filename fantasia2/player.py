@@ -58,12 +58,14 @@ class Player(QtCore.QObject):
 
         if self._playlist_model is not None:
             self._playlist_model.modelReset.disconnect(self._check_current_index)
+            self._playlist_model.rowsRemoved.disconnect(self._rows_removed)
             self._playlist_model.rowsInserted.disconnect(self._rows_inserted)
 
         self._playlist_model = value
 
         if self._playlist_model is not None:
             self._playlist_model.modelReset.connect(self._check_current_index)
+            self._playlist_model.rowsRemoved.connect(self._rows_removed)
             self._playlist_model.rowsInserted.connect(self._rows_inserted)
 
         self._current_index = QtCore.QPersistentModelIndex(
@@ -77,7 +79,16 @@ class Player(QtCore.QObject):
         if not self._current_index.isValid():
             self.stop()
 
-    @QtCore.Slot()
+    @QtCore.Slot(QtCore.QModelIndex, int, int)
+    def _rows_removed(self, parent, first, last) -> None:
+        if not self._current_index.isValid():
+            self._current_index = QtCore.QPersistentModelIndex(
+                self._playlist_model.index(first, 0)
+            )
+            self.currentTrackChanged.emit()
+            self._play()
+
+    @QtCore.Slot(QtCore.QModelIndex, int, int)
     def _rows_inserted(self, parent, first, last) -> None:
         if self.stopped:
             self._current_index = QtCore.QPersistentModelIndex(

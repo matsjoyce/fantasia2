@@ -225,7 +225,6 @@ QQL.ColumnLayout {
                 QQL.Layout.fillWidth: true
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                // interactive: false
                 columnWidthProvider: column => {
                     return [1, 2, 1, 0.5, 0.5][column] * table.width / model.columnCount();
                 }
