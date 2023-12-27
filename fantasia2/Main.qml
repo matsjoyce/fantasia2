@@ -178,6 +178,7 @@ QQC.ApplicationWindow {
                 tagModel: root.controller.tagModel
 
                 onAddToPlaylist: trackAppendAction.trigger()
+                onSyncLibrary: root.controller.syncLibrary()
             }
         }
 

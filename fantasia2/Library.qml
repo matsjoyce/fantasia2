@@ -15,6 +15,7 @@ QQL.ColumnLayout {
     required property TagModel.TagModel tagModel
 
     signal addToPlaylist
+    signal syncLibrary
 
     spacing: 0
 
@@ -193,6 +194,27 @@ QQL.ColumnLayout {
 
                 Component.onCompleted: currentIndex = indexOfValue(root.queryModel.ordering)
                 onActivated: root.queryModel.ordering = currentValue
+            }
+
+            QQC.ToolButton {
+                icon.height: 22
+                icon.name: "application-menu"
+                icon.width: 22
+
+                onClicked: moreMenu.open()
+
+                QQC.Menu {
+                    id: moreMenu
+
+                    y: parent.height
+
+                    QQC.MenuItem {
+                        icon.name: "folder-sync"
+                        text: "Check for new tracks"
+
+                        onClicked: root.syncLibrary()
+                    }
+                }
             }
         }
     }
