@@ -237,10 +237,11 @@ class QueryModel(TrackModel):
 
 
 @QtQml.QmlElement
+@QtQml.QmlUncreatable()
 class PlaylistModel(TrackModel):
-    def __init__(self) -> None:
+    def __init__(self, session) -> None:
         super().__init__()
-        self._query = ""
+        self._session = session
 
     @QtCore.Slot(list)
     def appendItems(self, indexes) -> None:
@@ -262,6 +263,25 @@ class PlaylistModel(TrackModel):
         self._items = list(self._items) + new_items
         self.endInsertRows()
 
+    @QtCore.Slot(int)
+    def appendAlbum(self, album_id: int) -> None:
+        album = self._session.query(db.Album).filter_by(id=album_id).one_or_none()
+        if album is None:
+            return
+        new_items = (
+            self._session.query(db.Track)
+            .filter_by(album_id=album.self_and_children().c.id)
+            .order_by(*QueryModel.SortOrder.ALPHABETICAL.sql)
+            .all()
+        )
+        self.beginInsertRows(
+            QtCore.QModelIndex(),
+            len(self._items),
+            len(self._items) + len(new_items) - 1,
+        )
+        self._items = list(self._items) + new_items
+        self.endInsertRows()
+
     def removeRows(self, row, count, parent=QtCore.QModelIndex()) -> bool:
         self.beginRemoveRows(parent, row, row + count - 1)
         self._items = self._items[:row] + self._items[row + count :]
@@ -273,3 +293,123 @@ class PlaylistModel(TrackModel):
         self.beginResetModel()
         self._items = []
         self.endResetModel()
+
+
+@QtQml.QmlElement
+@QtQml.QmlUncreatable()
+class AlbumModel(QtCore.QAbstractListModel):
+    def __init__(self, session) -> None:
+        super().__init__()
+        self._session = session
+        self._items: Sequence[db.Album] = []
+        self.layoutChanged.connect(self.countChanged)
+        self.rowsInserted.connect(self.countChanged)
+        self.modelReset.connect(self.countChanged)
+
+        self._root_album = None
+        self._tracks_model = TrackModel()
+        self._refresh()
+
+    def _refresh(self) -> None:
+        self.beginResetModel()
+        self._items = list(
+            self._session.query(db.Album)
+            .filter_by(parent=self._root_album)
+            .order_by(db.Album.name)
+            .all()
+        )
+        self.endResetModel()
+        self.rootChanged.emit()
+        self._tracks_model.beginResetModel()
+        self._tracks_model._items = list(
+            self._session.query(db.Track)
+            .filter_by(album=self._root_album)
+            .order_by(db.Track.name)
+            .all()
+        )
+        self._tracks_model.endResetModel()
+
+    def rowCount(self, parent: QtCore.QModelIndex) -> int:
+        return len(self._items) if not parent.isValid() else None
+
+    def flags(self, index):
+        return (
+            QtCore.Qt.ItemIsSelectable
+            | QtCore.Qt.ItemIsEnabled
+            | QtCore.Qt.ItemNeverHasChildren
+        )
+
+    def data(self, index, role):
+        if not self.checkIndex(index):
+            return None
+
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            return self._items[index.row()].name
+
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
+            return self._items[index.row()]
+
+        return None
+
+    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
+        if not self.checkIndex(index):
+            return False
+
+        if role == QtCore.Qt.ItemDataRole.EditRole:
+            return False
+        return False
+
+    countChanged = QtCore.Signal()
+
+    @QtCore.Property(int, notify=countChanged)
+    def count(self) -> int:
+        return len(self._items)
+
+    rootChanged = QtCore.Signal()
+
+    @QtCore.Property(str, notify=rootChanged)
+    def rootName(self) -> str:
+        return self._root_album.folder if self._root_album else ""
+
+    @QtCore.Property(int, notify=rootChanged)
+    def rootId(self) -> int:
+        return self._root_album.id if self._root_album else -1
+
+    @QtCore.Property(bool, notify=rootChanged)
+    def hasRoot(self) -> bool:
+        return self._root_album is not None
+
+    @QtCore.Property(list, notify=rootChanged)
+    def rootCovers(self) -> list[QtCore.QUrl]:
+        if self._root_album is None:
+            return []
+        return [
+            QtCore.QUrl.fromLocalFile(cover.path)
+            for cover in self._session.query(db.Cover)
+            .filter_by(album_id=self._root_album.self_and_children().c.id)
+            .all()
+        ]
+
+    @QtCore.Property(int, notify=rootChanged)
+    def rootTracks(self) -> int:
+        if self._root_album is None:
+            return 0
+        return (
+            self._session.query(db.Track)
+            .filter_by(album_id=self._root_album.self_and_children().c.id)
+            .count()
+        )
+
+    @QtCore.Slot(int)
+    def enterAlbum(self, index: int) -> None:
+        self._root_album = self._items[index]
+        self._refresh()
+
+    @QtCore.Slot()
+    def exitAlbum(self) -> None:
+        self._root_album = self._root_album.parent if self._root_album else None
+        self._refresh()
+
+    @QtCore.Property(TrackModel, constant=True)
+    def trackModel(self):
+        return self._tracks_model

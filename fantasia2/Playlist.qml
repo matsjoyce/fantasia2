@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQml.Models as QQM
 import QtQuick
 import QtQuick.Controls as QQC
-import QtQuick.Controls.Material as MatControls
 import QtQuick.Layouts as QQL
 import fantasia2.query_model as QueryModel
 
@@ -17,7 +16,6 @@ QQL.ColumnLayout {
     spacing: 0
 
     QQC.ToolBar {
-        MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
         QQL.Layout.fillHeight: false
         QQL.Layout.fillWidth: true
         leftPadding: 4
@@ -63,12 +61,6 @@ QQL.ColumnLayout {
             syncView: table
         }
 
-        Rectangle {
-            QQL.Layout.fillWidth: true
-            color: Qt.lighter(parent.MatControls.Material.background)
-            implicitHeight: 2
-        }
-
         QQC.ScrollView {
             QQL.Layout.fillHeight: true
             QQL.Layout.fillWidth: true
@@ -85,11 +77,10 @@ QQL.ColumnLayout {
                     return [1, 2, 1, 0.5, 0.5][column] * table.width / model.columnCount();
                 }
                 flickableDirection: Flickable.VerticalFlick
+                interactive: false
                 model: root.playlistModel
                 selectionBehavior: TableView.SelectRows
 
-                QQC.ScrollBar.vertical: QQC.ScrollBar {
-                }
                 delegate: Rectangle {
                     id: delegate
 
@@ -98,12 +89,11 @@ QQL.ColumnLayout {
                     required property int row
                     required property bool selected
 
-                    color: selected ? Qt.darker(MatControls.Material.accent) : "transparent"
+                    color: selected ? palette.highlight : "transparent"
                     implicitHeight: 30
                     implicitWidth: 100
 
                     QQC.IconLabel {
-                        icon.color: delegate.selected ? MatControls.Material.foreground : MatControls.Material.accent
                         icon.height: parent.height
                         icon.name: delegate.row == root.playingIndex ? "media-playback-playing" : ""
                         icon.width: parent.height
@@ -113,7 +103,6 @@ QQL.ColumnLayout {
                     QQC.Label {
                         anchors.fill: parent
                         anchors.leftMargin: parent.height
-                        color: delegate.row != root.playingIndex || delegate.selected ? MatControls.Material.foreground : MatControls.Material.accent
                         elide: Text.ElideRight
                         font.bold: delegate.row == root.playingIndex
                         horizontalAlignment: delegate.column >= 3 ? Text.AlignHCenter : Text.AlignLeft

@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQml.Models as QQM
 import QtQuick 6.4
 import QtQuick.Controls as QQC
-import QtQuick.Controls.Material as MatControls
 import QtQuick.Layouts as QQL
 import fantasia2.query_model as QueryModel
 import fantasia2.tag_model as TagModel
@@ -20,7 +19,6 @@ QQL.ColumnLayout {
     spacing: 0
 
     QQC.ToolBar {
-        MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
         QQL.Layout.fillHeight: false
         QQL.Layout.fillWidth: true
         leftPadding: 4
@@ -73,10 +71,10 @@ QQL.ColumnLayout {
                             }
 
                             onClicked: root.selectedIndexes.filter(idx => {
-                                    return idx.column == 2;
-                                }).forEach(idx => {
-                                    return idx.model.addTag(idx, id);
-                                })
+                                return idx.column == 2;
+                            }).forEach(idx => {
+                                return idx.model.addTag(idx, id);
+                            })
                         }
                     }
                 }
@@ -113,10 +111,10 @@ QQL.ColumnLayout {
                             }
 
                             onClicked: root.selectedIndexes.filter(idx => {
-                                    return idx.column == 2;
-                                }).forEach(idx => {
-                                    return idx.model.removeTag(idx, id);
-                                })
+                                return idx.column == 2;
+                            }).forEach(idx => {
+                                return idx.model.removeTag(idx, id);
+                            })
                         }
                     }
                 }
@@ -148,10 +146,10 @@ QQL.ColumnLayout {
                             text: "★".repeat(5 - index) + "☆".repeat(index)
 
                             onClicked: root.selectedIndexes.filter(idx => {
-                                    return idx.column == 3;
-                                }).forEach(idx => {
-                                    return idx.model.setData(idx, 5 - index);
-                                })
+                                return idx.column == 3;
+                            }).forEach(idx => {
+                                return idx.model.setData(idx, 5 - index);
+                            })
                         }
                     }
 
@@ -159,10 +157,10 @@ QQL.ColumnLayout {
                         text: "No rating"
 
                         onClicked: root.selectedIndexes.filter(idx => {
-                                return idx.column == 3;
-                            }).forEach(idx => {
-                                return idx.model.setData(idx, null);
-                            })
+                            return idx.column == 3;
+                        }).forEach(idx => {
+                            return idx.model.setData(idx, null);
+                        })
                     }
                 }
             }
@@ -176,19 +174,24 @@ QQL.ColumnLayout {
             QQC.ComboBox {
                 QQL.Layout.minimumWidth: 200
                 implicitHeight: 40
-                model: [{
+                model: [
+                    {
                         "value": QueryModel.QueryModel.SortOrder.ALPHABETICAL,
                         "text": qsTr("Alphabetical")
-                    }, {
+                    },
+                    {
                         "value": QueryModel.QueryModel.SortOrder.MOST_PLAYED,
                         "text": qsTr("Most played")
-                    }, {
+                    },
+                    {
                         "value": QueryModel.QueryModel.SortOrder.RATING,
                         "text": qsTr("Rating")
-                    }, {
+                    },
+                    {
                         "value": QueryModel.QueryModel.SortOrder.DURATION,
                         "text": qsTr("Duration")
-                    }]
+                    }
+                ]
                 textRole: "text"
                 valueRole: "value"
 
@@ -229,12 +232,6 @@ QQL.ColumnLayout {
             syncView: table
         }
 
-        Rectangle {
-            QQL.Layout.fillWidth: true
-            color: Qt.lighter(parent.MatControls.Material.background)
-            implicitHeight: 2
-        }
-
         QQC.ScrollView {
             QQL.Layout.fillHeight: true
             QQL.Layout.fillWidth: true
@@ -243,19 +240,16 @@ QQL.ColumnLayout {
             TableView {
                 id: table
 
-                QQL.Layout.fillHeight: true
-                QQL.Layout.fillWidth: true
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
                 columnWidthProvider: column => {
                     return [1, 2, 1, 0.5, 0.5][column] * table.width / model.columnCount();
                 }
                 flickableDirection: Flickable.VerticalFlick
+                interactive: false
                 model: root.queryModel
                 selectionBehavior: TableView.SelectRows
 
-                QQC.ScrollBar.vertical: QQC.ScrollBar {
-                }
                 delegate: Rectangle {
                     id: delegate
 
@@ -265,7 +259,7 @@ QQL.ColumnLayout {
                     required property int row
                     required property bool selected
 
-                    color: selected ? Qt.darker(MatControls.Material.accent) : "transparent"
+                    color: selected ? palette.highlight : "transparent"
                     implicitHeight: 30
                     implicitWidth: 100
 

@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as QQC
-import QtQuick.Controls.Material as MatControls
 import QtQuick.Layouts as QQL
 import fantasia2.controller as Controller
 import fantasia2.mpris as MPRIS
@@ -14,8 +13,6 @@ QQC.ApplicationWindow {
 
     required property Controller.Controller controller
 
-    MatControls.Material.accent: MatControls.Material.color(MatControls.Material.Red, MatControls.Material.Shade500)
-    MatControls.Material.theme: MatControls.Material.Dark
     minimumHeight: 450
     minimumWidth: 800
     visible: true
@@ -47,7 +44,7 @@ QQC.ApplicationWindow {
         id: tabBar
 
         Repeater {
-            model: ["Playlist", "Library"]
+            model: ["Playlist", "Library", "Albums"]
 
             QQC.TabButton {
                 required property string modelData
@@ -57,15 +54,10 @@ QQC.ApplicationWindow {
         }
     }
 
-    QueryModel.PlaylistModel {
-        id: playlistModel
-
-    }
-
     Player.Player {
         id: player
 
-        playlistModel: playlistModel
+        playlistModel: root.controller.playlistModel
     }
 
     MPRIS.MPRIS {
@@ -84,7 +76,7 @@ QQC.ApplicationWindow {
     QQC.Action {
         id: playPauseAction
 
-        enabled: playlistModel.count > 0
+        enabled: root.controller.playlistModel.count > 0
         icon.name: player.playing ? "media-playback-pause" : player.stopped ? "media-playlist-repeat-symbolic" : "media-playback-start"
         shortcut: "Space"
 
@@ -94,7 +86,7 @@ QQC.ApplicationWindow {
     QQC.Action {
         id: stopAction
 
-        enabled: playlistModel.count > 0
+        enabled: root.controller.playlistModel.count > 0
         icon.name: "media-playback-stop"
 
         onTriggered: player.stop()
@@ -103,7 +95,7 @@ QQC.ApplicationWindow {
     QQC.Action {
         id: skipBackwardAction
 
-        enabled: playlistModel.count > 0
+        enabled: root.controller.playlistModel.count > 0
         icon.name: "media-skip-backward"
 
         onTriggered: player.previous_track()
@@ -132,7 +124,7 @@ QQC.ApplicationWindow {
     QQC.Action {
         id: skipForwardAction
 
-        enabled: playlistModel.count > 0
+        enabled: root.controller.playlistModel.count > 0
         icon.name: "media-skip-forward"
 
         onTriggered: player.next_track()
@@ -144,7 +136,13 @@ QQC.ApplicationWindow {
         icon.name: "media-playlist-append"
         shortcut: "Return"
 
-        onTriggered: tabBar.currentIndex == 1 && playlistModel.appendItems(library.selectedIndexes)
+        onTriggered: {
+            if (tabBar.currentIndex == 1) {
+                root.controller.playlistModel.appendItems(library.selectedIndexes);
+            } else if (tabBar.currentIndex == 2) {
+                root.controller.playlistModel.appendItems(albums.selectedIndexes);
+            }
+        }
     }
 
     QQC.Action {
@@ -153,7 +151,7 @@ QQC.ApplicationWindow {
         icon.name: "edit-clear-list"
         shortcut: "Ctrl+C"
 
-        onTriggered: playlistModel.clear()
+        onTriggered: root.controller.playlistModel.clear()
     }
 
     QQL.ColumnLayout {
@@ -165,8 +163,9 @@ QQC.ApplicationWindow {
             currentIndex: tabBar.currentIndex
 
             Playlist {
+                QQL.Layout.fillWidth: true
                 playingIndex: player.currentTrackIndex
-                playlistModel: playlistModel
+                playlistModel: root.controller.playlistModel
 
                 onClearPlaylist: clearAction.trigger()
             }
@@ -174,16 +173,26 @@ QQC.ApplicationWindow {
             Library {
                 id: library
 
+                QQL.Layout.fillWidth: true
                 queryModel: root.controller.queryModel
                 tagModel: root.controller.tagModel
 
                 onAddToPlaylist: trackAppendAction.trigger()
                 onSyncLibrary: root.controller.syncLibrary()
             }
+
+            Albums {
+                id: albums
+
+                QQL.Layout.fillWidth: true
+                albumModel: root.controller.albumModel
+
+                onAddAlbumToPlaylist: root.controller.playlistModel.appendAlbum(albumModel.rootId)
+                onAddSelectedToPlaylist: trackAppendAction.trigger()
+            }
         }
 
         QQC.ToolBar {
-            MatControls.Material.background: Qt.lighter(parent.MatControls.Material.background)
             QQL.Layout.fillHeight: false
             QQL.Layout.fillWidth: true
             padding: 8

@@ -16,6 +16,8 @@ class Controller(QtCore.QObject):
 
         self._query_model = query_model.QueryModel(session)
         self._tag_model = tag_model.TagModel(session)
+        self._album_model = query_model.AlbumModel(session)
+        self._playlist_model = query_model.PlaylistModel(session)
         self._syncing = False
         self._instance = instance
 
@@ -33,6 +35,14 @@ class Controller(QtCore.QObject):
     @QtCore.Property(tag_model.TagModel, constant=True)
     def tagModel(self) -> tag_model.TagModel:
         return self._tag_model
+
+    @QtCore.Property(query_model.AlbumModel, constant=True)
+    def albumModel(self) -> query_model.AlbumModel:
+        return self._album_model
+
+    @QtCore.Property(query_model.PlaylistModel, constant=True)
+    def playlistModel(self) -> query_model.PlaylistModel:
+        return self._playlist_model
 
     @QtCore.Slot()
     def syncLibrary(self) -> None:

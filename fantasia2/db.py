@@ -4,6 +4,7 @@ import json
 import logging
 import pathlib
 
+import sqlalchemy
 from PySide6 import QtGui
 from sqlalchemy import BINARY, Column, Float, ForeignKey, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -56,8 +57,12 @@ class Tag(Base):
 class Track(Base):
     __tablename__ = "track"
     id = Column(Integer, primary_key=True)
-    folder = Column(String(256), nullable=False)
+    album_id = Column(
+        Integer, ForeignKey("album.id", name="fk_track_album"), nullable=True
+    )
+    album = relationship("Album")
     name = Column(String(100), nullable=False)
+    folder = Column(String(256), nullable=False)
     extension = Column(String(100), nullable=False)
     duration = Column(Float, nullable=False)
     file_hash = Column(BINARY(32), nullable=False)
@@ -67,12 +72,85 @@ class Track(Base):
 
     @property
     def path(self) -> pathlib.Path:
+        if self.album:
+            return self.album.path / (self.name + self.extension)
         session = session_mod.Session.object_session(self)
-        return (
-            session.info["instance"].base_dir
-            / self.folder
-            / (self.name + self.extension)
+        return session.info["instance"].base_dir / (self.name + self.extension)
+
+    # @property
+    # def folder(self) -> str:
+    #     return self.album.folder
+
+
+class Album(Base):
+    __tablename__ = "album"
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, ForeignKey("album.id"), nullable=True)
+    children = relationship("Album", back_populates="parent")
+    parent = relationship("Album", back_populates="children", remote_side=[id])
+    name = Column(String(100), nullable=False)
+
+    @property
+    def path(self) -> pathlib.Path:
+        if self.parent:
+            return self.parent.path / self.name
+        session = session_mod.Session.object_session(self)
+        return session.info["instance"].base_dir / self.name
+
+    @property
+    def folder(self) -> str:
+        if self.parent:
+            return f"{self.parent.folder}/{self.name}"
+        return self.name
+
+    @classmethod
+    def get_for_path(self, session, path):
+        bits = path.relative_to(session.info["instance"].base_dir).parts
+        album = None
+        for bit in bits:
+            subalbum = (
+                session.query(Album).filter_by(name=bit, parent=album).one_or_none()
+            )
+            if not subalbum:
+                subalbum = Album(name=bit, parent=album)
+                session.add(subalbum)
+                session.flush()
+            album = subalbum
+        return album
+
+    def self_and_children(self):
+        rec_base = (
+            sqlalchemy.select(Album.id)
+            .where(Album.id == self.id)
+            .cte(name="rec_tags", recursive=True)
         )
+        parent = sqlalchemy.orm.aliased(rec_base, name="parent")
+        return rec_base.union_all(
+            sqlalchemy.select(Album.id).join(parent, Album.parent_id == parent.c.id)
+        )
+
+
+class Cover(Base):
+    __tablename__ = "cover"
+    id = Column(Integer, primary_key=True)
+    album_id = Column(
+        Integer, ForeignKey("album.id", name="fk_track_album"), nullable=True
+    )
+    album = relationship("Album")
+    name = Column(String(100), nullable=False)
+    folder = Column(String(256), nullable=False)
+    extension = Column(String(100), nullable=False)
+
+    @property
+    def path(self) -> pathlib.Path:
+        if self.album:
+            return self.album.path / (self.name + self.extension)
+        session = session_mod.Session.object_session(self)
+        return session.info["instance"].base_dir / (self.name + self.extension)
+
+    # @property
+    # def folder(self) -> str:
+    #     return self.album.folder
 
 
 class F2Instance:

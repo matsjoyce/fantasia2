@@ -1,12 +1,13 @@
 """
 Usage:
-    fantasia2 [<path>]
     fantasia2 init [<path>]
     fantasia2 sync [<path>]
     fantasia2 dbupgrade <path>
     fantasia2 dbupdate <path>
     fantasia2 dbdowngrade <path> <revision>
     fantasia2 export <path> <exportpath> [--exclude=<excluded_albums>]
+    fantasia2 stats [<path>]
+    fantasia2 [<path>]
 """
 
 import pathlib
@@ -20,7 +21,7 @@ from alembic import command as alembic_command
 from . import controller, db, mpris, player, utils  # pylint: disable=unused-import
 
 
-def main():
+def main() -> None:
     args = docopt.docopt(__doc__)
     base_dir = (
         pathlib.Path(args["<path>"])
@@ -65,12 +66,14 @@ def main():
         )
         utils.export_library_to_location(instance, target_dir, excluded_albums)
 
+    elif args["stats"]:
+        utils.print_stats(instance)
+
     else:
         print("Qt version", QtCore.qVersion())
         app = QtWidgets.QApplication(sys.argv)
         app.setApplicationName("Fantasia2")
         app.setWindowIcon(QtGui.QIcon.fromTheme("emblem-music-symbolic"))
-        QtQuickControls2.QQuickStyle.setStyle("Material")
         engine = QtQml.QQmlApplicationEngine()
         with instance.session() as main_session:
             cont = controller.Controller(instance, main_session)

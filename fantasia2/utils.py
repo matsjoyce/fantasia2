@@ -17,6 +17,7 @@ QML_IMPORT_MAJOR_VERSION = 1
 
 
 SUPPORTED_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".opus", ".m4a", ".mp4"}
+SUPPORTED_COVER_EXTS = {".jpg", ".jpeg", ".png"}
 
 
 def alembic_cfg(instance):
@@ -70,13 +71,30 @@ def convert_ffmpeg(src, dst):
         raise RuntimeError("Transcoding failed")
 
 
-def sync_database_with_fs(instance: db.F2Instance):
+def sync_database_with_fs(instance: db.F2Instance) -> None:
     with instance.session() as session:
         base_dir = instance.base_dir
+        paths_on_fs = set(base_dir.rglob("*"))
+
         tracks_on_fs = {
-            f for f in base_dir.rglob("*") if f.is_file() and f.suffix in SUPPORTED_EXTS
+            f for f in paths_on_fs if f.is_file() and f.suffix in SUPPORTED_EXTS
         }
         tracks_in_db = {t.path: t for t in session.query(db.Track).all()}
+        albums_on_fs = set(
+            f for tf in tracks_on_fs for f in tf.parents if f in paths_on_fs
+        )
+        albums_in_db = {t.path: t for t in session.query(db.Album).all()}
+        covers_on_fs = {
+            f
+            for f in paths_on_fs
+            if f.is_file()
+            and f.suffix in SUPPORTED_COVER_EXTS
+            and f.parent in albums_on_fs
+        }
+        covers_in_db = {t.path: t for t in session.query(db.Cover).all()}
+
+        # print(paths_on_fs - tracks_on_fs - albums_on_fs - covers_on_fs)
+
         new_track_hashes = {
             f: db.hash_file(base_dir / f) for f in tracks_on_fs - set(tracks_in_db)
         }
@@ -94,6 +112,7 @@ def sync_database_with_fs(instance: db.F2Instance):
                 removed_track.name = new_path.stem
                 removed_track.folder = new_path.parent.relative_to(base_dir).as_posix()
                 removed_track.extension = new_path.suffix
+                removed_track.album = db.Album.get_for_path(session, new_path.parent)
                 tracks_in_db[new_path] = removed_track
             else:
                 print(f"Deleted {removed_track.path.relative_to(base_dir)}")
@@ -128,13 +147,37 @@ def sync_database_with_fs(instance: db.F2Instance):
                     duration=float(duration),
                     rating=None,
                     file_hash=new_track_hashes[added_path],
+                    album=db.Album.get_for_path(session, added_path.parent),
                 )
             )
+
+        for removed_cover_path in set(covers_in_db) - covers_on_fs:
+            removed_cover = covers_in_db[removed_cover_path]
+            print(f"Deleted {removed_cover_path.relative_to(base_dir)}")
+            session.delete(removed_cover)
+
+        for added_cover_path in covers_on_fs - set(covers_in_db):
+            print(f"Added {added_cover_path}")
+
+            session.add(
+                db.Cover(
+                    name=added_cover_path.stem,
+                    folder=added_cover_path.parent.relative_to(base_dir).as_posix(),
+                    extension=added_cover_path.suffix,
+                    album=db.Album.get_for_path(session, added_cover_path.parent),
+                )
+            )
+
+        for removed_album in sorted(
+            set(albums_in_db) - albums_on_fs, key=lambda x: len(x.parts), reverse=True
+        ):
+            print(f"Deleted {removed_album.relative_to(base_dir)}")
+            session.remove(db.Album.get_for_path(session, added_path.parent))
 
 
 def export_library_to_location(
     instance: db.F2Instance, target_dir: pathlib.Path, excluded_albums: Sequence[str]
-):
+) -> None:
     with instance.session() as session:
         print("Rendering directory structure")
         paths = {}
@@ -164,10 +207,10 @@ def export_library_to_location(
         to_remove = existing_export_paths - all_paths
         to_add = all_paths - existing_export_paths
 
-        print("Found", len(existing_export_paths), "paths")
-        print("Targeting", len(all_paths), "paths")
-        print("Will remove", len(to_remove), "paths")
-        print("Will add", len(to_add), "paths")
+        print("Found", sum(f.suffix != "" for f in existing_export_paths), "paths")
+        print("Targeting", sum(f.suffix != "" for f in all_paths), "paths")
+        print("Will remove", sum(f.suffix != "" for f in to_remove), "paths")
+        print("Will add", sum(f.suffix != "" for f in to_add), "paths")
         input("Continue? ")
 
         print("Removing excess paths")
@@ -203,7 +246,32 @@ def xdg_music_dir() -> pathlib.Path:
     )
 
 
-def format_duration(seconds):
+def print_stats(instance: db.F2Instance) -> None:
+    num_tracks = 0
+    tracks_size = 0
+
+    with instance.session() as session:
+        for track in session.query(db.Track).all():
+            num_tracks += 1
+            tracks_size += track.path.stat().st_size
+
+    print(f"{num_tracks} tracks, totalling {tracks_size/2**30:.2f} GiB")
+
+    album_counts = {}
+    with instance.session() as session:
+        for album in session.query(db.Album).all():
+            album_counts[album.folder] = (
+                session.query(db.Track).filter_by(album=album).count()
+            )
+
+    print("Most tracks:")
+    for album, count in sorted(album_counts.items(), key=lambda x: x[1], reverse=True)[
+        :10
+    ]:
+        print(f"    - {album}: {count} tracks")
+
+
+def format_duration(seconds: float) -> str:
     mins, seconds = divmod(seconds, 60)
     return f"{round(mins):02}:{math.floor(seconds):02}"
 
@@ -212,5 +280,5 @@ def format_duration(seconds):
 @QtQml.QmlSingleton
 class Utils(QtCore.QObject):
     @QtCore.Slot(float, result=str)
-    def formatDuration(self, seconds):
+    def formatDuration(self, seconds: float) -> str:
         return format_duration(seconds)
