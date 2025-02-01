@@ -4,8 +4,9 @@ import pathlib
 import sys
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent.parent))
 
@@ -60,7 +61,9 @@ def run_migrations_online():
     connectable = config.attributes.get("connection", None)
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection, target_metadata=target_metadata, render_as_batch=True
+        )
 
         with context.begin_transaction():
             context.run_migrations()

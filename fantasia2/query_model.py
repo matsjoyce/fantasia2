@@ -3,7 +3,7 @@ from typing import Sequence
 
 import sqlalchemy.orm
 from PySide6 import QtCore, QtQml
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import expression, func
 
 from . import db, utils
 
@@ -387,6 +387,8 @@ class AlbumModel(QtCore.QAbstractListModel):
             QtCore.QUrl.fromLocalFile(cover.path)
             for cover in self._session.query(db.Cover)
             .filter_by(album_id=self._root_album.self_and_children().c.id)
+            .join(db.Cover.album)
+            .order_by(db.Album.name)
             .all()
         ]
 
@@ -398,6 +400,26 @@ class AlbumModel(QtCore.QAbstractListModel):
             self._session.query(db.Track)
             .filter_by(album_id=self._root_album.self_and_children().c.id)
             .count()
+        )
+
+    @QtCore.Property(int, notify=rootChanged)
+    def rootTrackSize(self) -> int:
+        if self._root_album is None:
+            return 0
+        return (
+            self._session.query(func.sum(db.Track.file_size))
+            .filter_by(album_id=self._root_album.self_and_children().c.id)
+            .scalar()
+        )
+
+    @QtCore.Property(float, notify=rootChanged)
+    def rootTrackDuration(self) -> float:
+        if self._root_album is None:
+            return 0
+        return (
+            self._session.query(func.sum(db.Track.duration))
+            .filter_by(album_id=self._root_album.self_and_children().c.id)
+            .scalar()
         )
 
     @QtCore.Slot(int)

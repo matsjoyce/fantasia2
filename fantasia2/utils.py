@@ -6,9 +6,8 @@ import subprocess
 from typing import Sequence
 
 import tqdm
-from PySide6 import QtCore, QtQml
-
 from alembic import config as alembic_config
+from PySide6 import QtCore, QtQml
 
 from . import db
 
@@ -147,6 +146,7 @@ def sync_database_with_fs(instance: db.F2Instance) -> None:
                     duration=float(duration),
                     rating=None,
                     file_hash=new_track_hashes[added_path],
+                    file_size=added_path.stat().st_size,
                     album=db.Album.get_for_path(session, added_path.parent),
                 )
             )
@@ -273,7 +273,10 @@ def print_stats(instance: db.F2Instance) -> None:
 
 def format_duration(seconds: float) -> str:
     mins, seconds = divmod(seconds, 60)
-    return f"{round(mins):02}:{math.floor(seconds):02}"
+    if mins <= 60:
+        return f"{round(mins):02}:{math.floor(seconds):02}"
+    hours, mins = divmod(mins, 60)
+    return f"{round(hours):02}:{round(mins):02}:{math.floor(seconds):02}"
 
 
 @QtQml.QmlElement

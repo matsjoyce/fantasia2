@@ -66,6 +66,7 @@ class Track(Base):
     extension = Column(String(100), nullable=False)
     duration = Column(Float, nullable=False)
     file_hash = Column(BINARY(32), nullable=False)
+    file_size = Column(Integer, nullable=False)
     rating = Column(Integer, nullable=True)
     tags = relationship("Tag", secondary="track_to_tags", back_populates="tracks")
     listenings = Column(Integer, nullable=False, server_default="0")

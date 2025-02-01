@@ -5,6 +5,7 @@ import QtQuick.Controls as QQC
 import QtQuick.Layouts as QQL
 import QtQuick.Effects as QQE
 import fantasia2.query_model as QueryModel
+import fantasia2.utils as Utils
 
 QQC.ScrollView {
     id: root
@@ -45,7 +46,7 @@ QQC.ScrollView {
 
                 QQC.Label {
                     color: "white"
-                    text: "%1 tracks".arg(root.albumModel.rootTracks)
+                    text: "%1 tracks\n%2\n%3 MiB".arg(root.albumModel.rootTracks).arg(Utils.Utils.formatDuration(root.albumModel.rootTrackDuration)).arg(Number(root.albumModel.rootTrackSize / 2 ** 20).toFixed(1))
                 }
             }
 
